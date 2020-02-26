@@ -25,7 +25,7 @@ shinyUI(pageWithSidebar(
          <p>&copy; 2020 Hynek Cígler<br>
          Department of psychology, Faculty of Social Studies<br>
          Masaryk University, Brno, Czech Republic<br>
-         <a href='https://github.com/hynekcigler/applications/tree/master/DAG' target='_blank'>Source code on GitHub</a></p>"), 
+         <a href='https://github.com/hynekcigler/applications/tree/master/DAG' target='_blank'>Source code on GitHub.</a></p>"), 
     width = 3
   ),
   
