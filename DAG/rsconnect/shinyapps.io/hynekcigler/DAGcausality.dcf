@@ -1,0 +1,12 @@
+name: DAGcausality
+title: DAGcausality
+username:
+account: hynekcigler
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1869520
+bundleId: 2832605
+url: https://hynekcigler.shinyapps.io/DAGcausality/
+when: 1582755710.39482
+asMultiple: FALSE
+asStatic: FALSE
