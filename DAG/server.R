@@ -5,8 +5,9 @@ library(corpcor)
 
 shinyServer(function(input, output, session) {
   
-  ## true correlation graph
-  
+
+# Je graf DAG? ------------------------------------------------------------
+
   DAG <- reactive({
     if (((input$ABdir == "AB" & input$BCdir == "BC" & input$ACdir == "CA") | (input$ABdir == "BA" & input$BCdir == "CB" & input$ACdir == "AC")) & 
         (input$AB != 0 & input$BC != 0 & input$AC != 0)) {
@@ -16,6 +17,10 @@ shinyServer(function(input, output, session) {
     }
   })
   
+
+# definice pravého kauzálního grafu ---------------------------------------
+
+
   truegraph <- reactive({
     if (isTRUE(DAG())) {
       truegraph <- matrix(c(0, NA, NA, 
@@ -51,6 +56,9 @@ shinyServer(function(input, output, session) {
 
   })
   
+
+# definice pravého korelačního grafu --------------------------------------
+
   truecorgraph <- reactive({
     unweight <- as.logical(truegraph())
     truecorgraph <- matrix(c(1, NA, NA, 
@@ -96,7 +104,32 @@ shinyServer(function(input, output, session) {
     
   })
   
+
+# Vektor reliabilit -------------------------------------------------------
+
+  relmat <- reactive({
+    # relmat <- matrix(NA, ncol=3, nrow = 3, dimnames = list(LETTERS[1:3], LETTERS[1:3]))
+    # diag(relmat) <- c(input$relA, input$relB, input$relC)
+    c(input$relA, input$relB, input$relC)
+  })
   
+
+# Korelační pozorovaný graf ---------------------------------------------------
+
+  observedcorgraph <- reactive({
+    # observedcorgraph <- matrix(1, nrow = 3, ncol = 3, dimnames = list(LETTERS[1:3], LETTERS[1:3]))
+    # observedcorgraph
+    truecorgraph <- truecorgraph()
+    observedcorgraph <- truecorgraph
+    observedcorgraph[1,2] <- observedcorgraph[2,1] <- truecorgraph()[1,2]*relmat()[1]*relmat()[2]
+    observedcorgraph[1,3] <- observedcorgraph[3,1] <- truecorgraph()[1,3]*relmat()[1]*relmat()[3]
+    observedcorgraph[2,3] <- observedcorgraph[3,2] <- truecorgraph()[2,3]*relmat()[2]*relmat()[3]
+    observedcorgraph
+  })
+  
+
+# Parciální graf ----------------------------------------------------------
+
   partial_graph <- reactive({
     partial_graph <- cor2pcor(truecorgraph())
     warn1 <- ""
@@ -108,39 +141,84 @@ shinyServer(function(input, output, session) {
     }
     
     dimnames(partial_graph) <- dimnames(truecorgraph())
-    list(partial_graph, warn1, warn2)
+    list(graph=partial_graph, warn1=warn1, warn2=warn2)
+    # partial_graph
   })
   
-  
-  
-  output$true_tab <- renderTable({
-    truegraph()
-  }, rownames =T)
-  
-  output$truecor_tab <- renderTable({
-    truecorgraph()
-  }, rownames =T)
-  
-  output$parcial_tab <- renderTable({
-    partial_graph()[[1]]
-  }, rownames =T)
-  output$parcial_warn1 <- renderText({
-    partial_graph()[[2]]
-  })
-  output$parcial_warn2 <- renderText({
-    partial_graph()[[3]]
-  })
   
 
   
+
+# OUTPUT: Tables ---------------------------------------------------------
+
+  output$true_tab <- renderTable({
+    if (isTRUE(DAG())) {
+      truegraph()
+    }
+  }, rownames =T)
+  
+  output$truecor_tab <- renderTable({
+    if (isTRUE(DAG())) {
+      truecorgraph()
+    }
+  }, rownames =T)
+  
+  output$partial_tab <- renderTable({
+    if (isTRUE(DAG())) {
+      partial_graph()$graph
+    }
+  }, rownames =T)
+  
+  output$observedcor_tab <- renderTable({
+    if (isTRUE(DAG())) {
+      observedcorgraph()
+    }
+  }, rownames =T)
+  
+
+# OUTOUT: Warnings -------------------------------------------------------
+
+  output$partial_warn1 <- renderText({
+    if (isTRUE(DAG())) {
+      partial_graph()$warn1
+    }
+  })
+  output$partial_warn2 <- renderText({
+    if (isTRUE(DAG())) {
+      partial_graph()$warn2
+    }
+  })
+  
+  output$warn <- renderText({
+    if (!isTRUE(DAG())) {
+      "Graf je cyklický a nejde tedy o DAG. Změňte nastavení grafu!"
+    }
+  })
+  
+
+
+# OUTPUT: plots -----------------------------------------------------------
+
   output$true_plot <- renderPlot({
-    qgraph(truegraph(), layout = "circle", asize=15, color = colors()[571])
+    if (isTRUE(DAG())) {
+      qgraph(truegraph(), layout = "circle", asize=15, color = colors()[571], maximum=1)
+    }
   }, width = 320, height = 320)
   output$truecor_plot <- renderPlot({
-    qgraph(truecorgraph(), layout = "circle", color = colors()[148])
+    if (isTRUE(DAG())) {
+      qgraph(truecorgraph(), layout = "circle", color = colors()[148], maximum=1)
+    }
   }, width = 320, height = 320)
   output$partial <- renderPlot({
-    qgraph(partial_graph()[[1]], layout = "circle", color = colors()[148])
+    if (isTRUE(DAG())) {
+      qgraph(partial_graph()$graph, layout = "circle", color = colors()[148], maximum=1)
+    }
+  }, width = 320, height = 320)
+  output$observed_plot <- renderPlot({
+    if (isTRUE(DAG())) {
+      qgraph(observedcorgraph(), layout = "circle", color = colors()[148], maximum=1)
+      
+    }
   }, width = 320, height = 320)
 })
 
