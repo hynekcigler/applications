@@ -5,8 +5,8 @@ account: hynekcigler
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2027933
-bundleId: 2949661
+bundleId: 3023088
 url: https://hynekcigler.shinyapps.io/COVID-19/
-when: 1585671615.56552
+when: 1587057143.72633
 asMultiple: FALSE
 asStatic: FALSE
