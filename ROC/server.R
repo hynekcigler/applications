@@ -49,13 +49,20 @@ shinyServer(function(input, output, session) {
     input$truesenz
   })
   
+  bias <- reactive({
+    if (input$republika == 1 | input$sampling == 1) {
+      prevalence()
+    } else {
+      prevalence()*input$bias / (1 - prevalence() + prevalence()*input$bias)
+    }
+  })
   
 
   sick <- reactive({
-    populace() * prevalence()
+    populace() * bias()
   })
   healthy <- reactive({
-    populace() * (1-prevalence())
+    populace() * (1-bias())
   })
   TP <- reactive({
     if(input$error == T) {

@@ -9,7 +9,11 @@ shinyUI(fluidPage(
   hr(),
 
 
-fluidRow(  column(
+fluidRow(  
+
+# Sidepanel ---------------------------------------------------------------
+
+  column(
   h4("Prevalence viru v populaci"),
   sliderInput("prevalence", label = "Kolik procent lidí je skutečně nakažených?", min = 0, max = 100, value = 5, step = .1, 
               animate=animationOptions(interval = 10, loop = T), 
@@ -19,7 +23,7 @@ fluidRow(  column(
   conditionalPanel(
     condition ="input.republika == 0",
     sliderInput("populace", label = "Velikost vzorku", ticks = F,
-                min = 100, max = 100000, value = 10000, step = 10)
+                min = 100, max = 100000, value = 27000, step = 100)
   ),
   conditionalPanel(
     condition ="input.republika == 1",
@@ -35,7 +39,6 @@ fluidRow(  column(
                               vlastní="user")),
   p(tags$strong("PCR:"), " senzitivita 0,937; specificita 0,999", br(),
     tags$strong("rychlotest:"), ": senzitivita 0,7; specificita 0,8"),
-  checkboxInput("error", "Jsou parametry testu správné?", value = T),
   conditionalPanel(
     condition = "input.typ == 'user'",
     h4("Odhad parametrů testu:"),
@@ -44,6 +47,24 @@ fluidRow(  column(
                 animate=animationOptions(interval = 200, loop = T)), 
     sliderInput("spec", label = "specificita:", min = .5, max = 1, value = .8, step = .01, 
                 animate=animationOptions(interval = 200, loop = T))),
+  
+  conditionalPanel(
+    condition ="input.republika == 0",
+    checkboxInput("sampling", "Je vzorek vybraný náhodně?", value = T),
+    conditionalPanel(
+      condition = "input.sampling == 0", 
+      p(tags$small("Vzorek není vybraný náhodně; jde například o dobrovolníky.", br(), 
+                   "Lze očekávat, že lidé působící v rizikovém prostředí, 
+                 kteří mají vyšší pravděpodobnost nákazy, se rozhodnou pro účast ve studii ve srovnání 
+                 s běžnou populací ČR.")),
+      sliderInput("bias", label = "Kolikrát je větší pravděpodobnost, 
+                že se pro dobrovolnou účast ve studii rozhodne infikovaný člověk než neinfikovaný?", 
+                  value = 1, min = 1, max = 10, step = .1)
+    )
+  ),
+  
+  
+  checkboxInput("error", "Jsou parametry testu správné?", value = T),
   conditionalPanel(
     condition = "input.error == 0", 
     h4("Skutečné parametry testu:"),
@@ -89,7 +110,7 @@ column(h3("Výsledek testu vs. skutečnost"),
          ),
          tags$tbody(
            tags$tr(
-             tags$th("skutečnost", rowspan=2,
+             tags$th("skutečnost", br(), tags$small("ve vzorku"), rowspan=2,
                      style="text-align: left; vertical-align: middle; border-bottom: 2px solid #ddd;"),
              tags$th("nemocní", style="vertical-align: middle;"),
              tags$td(textOutput("TP", inline = T), style="text-align: center;"),
