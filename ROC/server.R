@@ -37,7 +37,12 @@ shinyServer(function(input, output, session) {
     if (input$type == "populace") {
       input$prevalence/100
     } else {
-      (input$prevalence/100 + SPEC() - 1)/(SENZ() + SPEC() - 1)
+      if (input$error == T) {
+        (input$prevalence/100 + SPEC() - 1)/(SENZ() + SPEC() - 1)
+      } else {
+        (input$prevalence/100 + trueSPEC() - 1)/(trueSENZ() + trueSPEC() - 1)
+      }
+      
     }
   })
   
@@ -255,6 +260,9 @@ shinyServer(function(input, output, session) {
     
     if (correction() < 0) {
       print("Varování: Odhad populační prevalence je menší než 0, což není možné. Výsledky nedávají smysl.")
+    }
+    if (input$republika == 1) {
+      print("Varování: P-hodnoty nejsou korigované na konečnou velikost vzorku a jsou zkreslené.")
     }
   })  
   
