@@ -11,14 +11,34 @@ shinyServer(function(input, output, session) {
   
   SENZ <- reactive({if(input$typ == "PCR") {
     .937
-  } else if (input$typ == "rychlo") {
+  } else if (input$typ == "rychlo0") {
     .7
+  } else if (input$typ == "rychlo1") {
+    .956
+  } else if(input$typ == "rychlo2") {
+    .96
   } else {
     input$senz
   }})
   
+  SPEC <- reactive({if(input$typ == "PCR") {
+    .999
+  } else if (input$typ == "rychlo0") {
+    .8
+  } else if (input$typ == "rychlo1") {
+    .952
+  } else if(input$typ == "rychlo2") {
+    .903
+  } else {
+    input$spec
+  }})
+  
   prevalence <- reactive({
-    input$prevalence/100
+    if (input$type == "populace") {
+      input$prevalence/100
+    } else {
+      (input$prevalence/100 + SPEC() - 1)/(SENZ() + SPEC() - 1)
+    }
   })
   
   populace <- reactive({
@@ -28,16 +48,6 @@ shinyServer(function(input, output, session) {
       input$populace
     }
   })
-  
-  
-  
-  SPEC <- reactive({if(input$typ == "PCR") {
-    .999
-  } else if (input$typ == "rychlo") {
-    .8
-  } else {
-    input$spec
-  }})
   
   output$senzitivita <- renderText(SENZ())
   output$specificita <- renderText(SPEC())
@@ -185,12 +195,15 @@ shinyServer(function(input, output, session) {
   })
   
   output$ci <- renderText({
-    paste(round(binom1()$conf.int[1]*100, 1), round(binom1()$conf.int[2]*100, 1), sep="; ")
+    if (min(c(TP(), TN(), FP(), FN()))/populace() > 0 & max(c(TP(), TN(), FP(), FN()))/populace() < 1) {
+      paste(round(binom1()$conf.int[1]*100, 1), round(binom1()$conf.int[2]*100, 1), sep="; ")
+    } else {"NaN, NaN"}
+
   })
   
   output$ci_correct <- renderText({
-    if(correction() < 0) {
-      "CI nelze spočítat, protože korekce poskytuje záporné hodnoty prevalence"
+    if(correction() < 0 | min(c(TP(), TN(), FP(), FN()))/populace() < 0 | max(c(TP(), TN(), FP(), FN()))/populace() > 1) {
+      "NaN, NaN"
     } else {
       paste(round(binom2()$conf.int[1]*100, 1), round(binom2()$conf.int[2]*100, 1), sep="; ")
     }
@@ -198,10 +211,17 @@ shinyServer(function(input, output, session) {
   })
   
   output$p <- renderText({
-    round(binom1()$p.value, 3)  })
+    if (min(c(TP(), TN(), FP(), FN()))/populace() > 0 & max(c(TP(), TN(), FP(), FN()))/populace() < 1) {
+      round(binom1()$p.value, 3)
+    } else  {
+      "NaN"
+    }
+  })
+  
+  
   output$p_correct <- renderText({
-    if(correction() < 0) {
-      "p-hodnotu nelze spočítat, protože korekce poskytuje záporné hodnoty prevalence"
+    if(correction() < 0| min(c(TP(), TN(), FP(), FN()))/populace() < 0 | max(c(TP(), TN(), FP(), FN()))/populace() > 1) {
+      "NaN"
     } else {
       round(binom2()$p.value, 3)
     }
@@ -224,6 +244,21 @@ shinyServer(function(input, output, session) {
     formatC(TN()/(TN()+FN())*100, digits=1, decimal.mark = ",", format="f")
   }) 
   
+  
+
+# * warning ---------------------------------------------------------------
+
+  output$warn <- renderPrint({
+    if (min(c(TP(), TN(), FP(), FN()))/populace() < 0 | max(c(TP(), TN(), FP(), FN()))/populace() > 1) {
+      print("Varování: V bivariační tabulce jsou záporné hodnoty. Do aplikace jsou zadána nesmyslná data.")
+    }
+    
+    if (correction() < 0) {
+      print("Varování: Odhad populační prevalence je menší než 0, což není možné. Výsledky nedávají smysl.")
+    }
+  })  
+  
+
 
 # grafy -------------------------------------------------------------------
 

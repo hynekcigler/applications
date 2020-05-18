@@ -6,6 +6,7 @@ shinyUI(fluidPage(
   titlePanel("COVID-19: Chybovost a spolehlivost testů"),
   tags$head(includeHTML(("ga.html"))),
   title = "COVID-19: Chybovost a spolehlivost testů",
+  withMathJax(),
   hr(),
 
 
@@ -14,10 +15,15 @@ fluidRow(
 # Sidepanel ---------------------------------------------------------------
 
   column(
-  h4("Prevalence viru v populaci"),
-  sliderInput("prevalence", label = "Kolik procent lidí je skutečně nakažených?", min = 0, max = 100, value = 5, step = .1, 
+  h4("Prevalence viru"),
+  radioButtons("type", label = "Jaký typ prevalence chcete zadat?", 
+               choices = list('Skutečnou prevalenci' = "populace", 
+                              'Pozorovanou prevalenci' = "vzorek")),
+  sliderInput("prevalence", label = "Kolik procent lidí ze vzorku je nakažených?", min = 0, max = 100, value = 5, step = .1, 
               animate=animationOptions(interval = 10, loop = T), 
               post=" %"),
+  helpText("Pokud jste vybrali skutečnou prevalenci, zadejte podíl osob, které jsou infikované ve skutečnosti. 
+           Pokud pracujete s pozorovanou prevalenci, zadejte podíl osob, u kterých vyšel pozitivní test."),
   checkboxInput("republika", label = "Chcete použít namísto vzorku počet obyvatel České republiky?", 
                 value = F), 
   conditionalPanel(
@@ -35,10 +41,18 @@ fluidRow(
   h4("Parametry použitého testu"),
   radioButtons("typ", label = "Který test používáte?", 
                choices = list(PCR="PCR", 
-                              rychlotest="rychlo", 
+                              rychlotest="rychlo0",
+                              WANTAI="rychlo1", 
+                              ELISA="rychlo2",
                               vlastní="user")),
-  p(tags$strong("PCR:"), " senzitivita 0,937; specificita 0,999", br(),
-    tags$strong("rychlotest:"), ": senzitivita 0,7; specificita 0,8"),
+  helpText(tags$strong("PCR:"), " senzitivita 0,937; specificita 0,999", br(), 
+    tags$small("(Testy používané v nemocnici.)"), br(), 
+    tags$strong("rychlotest:"), "senzitivita 0,7; specificita 0,8", br(), 
+    tags$small("(Parametry celostátní studie odhadnuté z původních informací."), br(),
+    tags$strong("WANTAI:"), ": senzitivita 0,956; specificita 0,952", br(), 
+    tags$small("(Testy použité v celostátní studii ÚZIS.)"), br(),
+    tags$strong("ELISA:"), ": senzitivita 0,960; specificita 0,903", br(), 
+    tags$small("(Testy použité ve studii Jihočeského kraje.)")), 
   conditionalPanel(
     condition = "input.typ == 'user'",
     h4("Odhad parametrů testu:"),
@@ -51,15 +65,17 @@ fluidRow(
   conditionalPanel(
     condition ="input.republika == 0",
     checkboxInput("sampling", "Je vzorek vybraný náhodně?", value = T),
+    hr(),
     conditionalPanel(
       condition = "input.sampling == 0", 
-      p(tags$small("Vzorek není vybraný náhodně; jde například o dobrovolníky.", br(), 
+      helpText(tags$small("Vzorek není vybraný náhodně; jde například o dobrovolníky.", br(), 
                    "Lze očekávat, že lidé působící v rizikovém prostředí, 
                  kteří mají vyšší pravděpodobnost nákazy, se rozhodnou pro účast ve studii ve srovnání 
                  s běžnou populací ČR.")),
       sliderInput("bias", label = "Kolikrát je větší pravděpodobnost, 
                 že se pro dobrovolnou účast ve studii rozhodne infikovaný člověk než neinfikovaný?", 
-                  value = 1, min = 1, max = 10, step = .1)
+                  value = 1, min = 1, max = 10, step = .1),
+      hr()
     )
   ),
   
@@ -68,7 +84,7 @@ fluidRow(
   conditionalPanel(
     condition = "input.error == 0", 
     h4("Skutečné parametry testu:"),
-    p(tags$small("Které test má ve skutečnosti.")),
+    helpText(tags$small("Zde zadejte skutečné parametry testu, pokud se odlišují od známých (resp. odhadovaných) parametrů.")),
     sliderInput("truesenz", label = "senzitivita", min = .5, max = 1, value = .7, step = .01,
                 animate = animationOptions(interval = 200, loop = T)),
     sliderInput("truespec", label = "specificita", min = .5, max = 1, value = .8, step = .01,
@@ -88,6 +104,7 @@ fluidRow(
        " Hynek Cígler, Ph.D.<br>
          Katedra psychologie, Fakulta sociálních studií<br>
          Masarykova universita<br>
+         Verze aplikace v0.3.<br>
          <a href='https://github.com/hynekcigler/applications/tree/master/ROC' target='_blank'>Source code on GitHub.</a></p>"), 
   width = 3
 ),
@@ -97,8 +114,8 @@ fluidRow(
 # Mainpanel ---------------------------------------------------------------
 
 
-column(h3("Výsledek testu vs. skutečnost"),
-       
+column(verbatimTextOutput("warn"),
+       h3("Výsledek testu vs. skutečnost"),
        tags$table(
          tags$thead(
            tags$tr(tags$th("", style="text-align: center; vertical-align: bottom; ", rowspan=2),
@@ -181,6 +198,8 @@ column(h3("Výsledek testu vs. skutečnost"),
        width = 9
        
 )), fluidRow(
+  withMathJax(),
+  
   column(
     # * info ------------------------------------------------------------------
     hr(),
@@ -252,23 +271,38 @@ column(h3("Výsledek testu vs. skutečnost"),
     h4("Odhad skutečné prevalence a nepřesnost diagnostiky"),
     p("Nepřesnost diagnostického nástroje má vliv na odhad promořenosti populace. 
       Zjednodušeně lze říct, že čím větší je chybovost testu, tím blíže je odhadovaná prevalence 
-      blízká 50 %. Tuto nepřesnost však lze možné korigovat podle vzorce EST = (PREV+SENZ-1)/(SENZ + SPEC -1 
-      kde PREV je pozorovaná prevalence, SENZ a SPEC senzitivita a specificita testu a EST je 
-      odhadovaná skutečná prevalence po korekci.", br(), 
+      blízká 50 %. Tuto nepřesnost však lze možné korigovat mnoha různými postupy. Jeden z nejjednodušších, 
+      který jsme použili v této aplikaci,  odhaduje skutečnou prevalenci \\(P^*\\) v daném vzorku podle vzorce
+      
+      $$P^* = \\frac{P+Sp-1}{Se+Sp-1}$$
+      
+      kde \\(P\\) je pozorovaný podíl pozorovaných pozitivních případů), 
+      \\(Se\\) je specificita a  \\(Sp\\) specificita testu.", 
       "Pro účely této korekce je nicméně nezbytně nutné znát skutečnou senzitivitu a specificitu. 
-      Aplikace umožňuje nastavit jinou specificitu a senzitivitu (stačí zrušit zakliknutí 
+      Případná nepřesnost v těchto parametrech pochopitelně zkreslí odhad populační prevalence. 
+      Aplikace proto umožňuje nastavit jinou specificitu a senzitivitu (stačí zrušit zakliknutí 
       Jsou parametry testu správné)."),
     
-    p("Je důležité si uvědomit, že prevalence nemoci záleží na konkrétní populaci. Jiná bude 
-  u náhodně vybraného občana České republiky, jiná (a výrazně vyšší) bude u člověka, který vykazuje 
+    p("Z ukázkových důvodů si může uživatel aplikace vybrat, zda chce zadat pozorovanou prevalenci v daném vzorku 
+      (tedy přímo podíl případů identifikovaných jako pozitivní), nebo skutečnou prevalenci (počet skutečně infikovaných). 
+      Je nicméně potřeba si uvědomit, že skutečnou prevalenci nikdy nemůžeme znát; zde je tato možnost poskytnuta 
+      pouze pro ilustrační účely."),
+    
+    p("Dále je důležité si uvědomit, že prevalence nemoci záleží na konkrétní populaci. Jiná bude 
+  u náhodně vybraného občana České republiky, jiná (a výrazně vyšší) bude v populaci, jejíž členové vykazují 
   běžné symptomy onemocnění virem COVID-19."),
+    h4("Použité parametry testů"),
     p("Jako spolehlivost testu RT-PCR byly použity", 
       tags$a("tyto hodnoty", href="https://www.massdevice.com/covid-19-test-development-surges-with-pandemic/"),
-      "spolehlivost tzv. rychlotestů byla odhadnuta na základě", 
-      a("vyjádření prof. Prymuly", 
-        href="https://www.novinky.cz/domaci/clanek/prymula-o-chybovosti-rychlotestu-jsme-vedeli-menime-narizeni-40317761"),
-      "který uváděl jejich spolehlivost kolem 20–30 %."
-    ),
+      ". Spolehlivost rychlotestů WANTAI, které byly použity v celostátní studii, byla odhadnuta na základě", 
+      tags$a("výsledků studie", 
+        href="https://covid-imunita.uzis.cz/res/file/prezentace/20200506-dusek.pdf"),
+      ", zatímco pro přesnost testů ELISA (Anti-SARS-CoV-2 ELISA IgA) byly použity",  
+      tags$a("informace výrobce", href="https://www.coronavirus-diagnostics.com/antibody-detection-tests-for-covid-19.html"), 
+      ". V původní verzi této kalkulačky byly parametry rychlotestů z celostátní studie 
+      (v aplikaci označované jako rychlotest) odhadnuty na základě", 
+      tags$a("vyjádření prof. Prymuly", href="https://www.novinky.cz/domaci/clanek/prymula-o-chybovosti-rychlotestu-jsme-vedeli-menime-narizeni-40317761"), 
+      "."),
     p("Pro více informací doporučujeme například", 
       a("tento článek", href="https://en.wikipedia.org/wiki/Receiver_operating_characteristic"), 
       "na anglické Wikipedii."),
