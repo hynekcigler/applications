@@ -78,6 +78,7 @@ shinyServer(function(input, output, session) {
     }
   })
   output$scatter <- renderPlot({
+    input$button
     rel <- as.numeric(input$test)
     if (rel == 0) {
       rel <- input$test.user
